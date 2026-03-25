@@ -1,0 +1,37 @@
+
+import pygame
+import math
+
+class Tower:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+        self.range = 150
+        self.color = (0,0,255)
+
+        self.fire_rate = 60 #frames between shots
+        self.timer = 0
+
+    def update(self, enemies):
+        self.timer += 1
+
+        if self.timer >= self.fire_rate:
+            target = self.get_target(enemies)
+            if target:
+                print('shooting enemy') # placeholder
+                self.timer = 0
+
+    def draw(self, screen):
+        # draw tower
+        pygame.draw.circle(screen, self.color, (self.x, self.y), 15)
+
+        # draw range (optional)
+        pygame.draw.circle(screen, (0, 0, 255), (self.x, self.y), self.range, 1)
+
+    def get_target(self, enemies):
+        for enemy in enemies:
+            dist = math.hypot(enemy.x - self.x, enemy.y - self.y)
+            if dist <= self.range:
+                return enemy
+        return None
