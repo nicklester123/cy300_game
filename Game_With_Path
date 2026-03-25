@@ -1,0 +1,99 @@
+import sys
+import pygame
+from tower_settings import Settingz
+from enemy import Enemy
+
+class PVTParts:
+
+     def __init__(self):
+        """Initialize the game, and create game resources."""
+        pygame.init()
+        #Fram Rate
+        self.clock = pygame.time.Clock()
+#Display Window
+        self.screen = pygame.display.set_mode((600, 400))
+        pygame.display.set_caption("PVT Parts")
+#background color
+        self.bg_color = (100, 200, 100)
+        #Acess Settings
+        self.settings = Settingz()
+
+        #Full screen mode
+        self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        self.settings.screen_width = self.screen.get_rect().width
+        self.settings.screen_height = self.screen.get_rect().height
+
+        self.screen = pygame.display.set_mode(
+            (self.settings.screen_width, self.settings.screen_height))
+        # Path
+        self.path = [
+    (0, 400),
+    (300, 400),
+    (300, 200),
+    (500, 200),
+    (500, 500),
+    (300, 500),
+    (300, 200),
+    (600, 200),
+    (600, 600),
+    (1200, 600)
+]
+
+# Enemy
+        self.enemy = Enemy(self.path)
+    
+     def run_game(self):
+        """Start the main loop for the game."""
+        while True:
+             self._check_events()
+             self._update_screen()
+             self.enemy.update()  
+            
+            # # Watch for keyboard and mouse events.
+             for event in pygame.event.get():
+                 if event.type == pygame.QUIT:
+                    sys.exit()
+                #Frame rate
+             self.clock.tick(60)
+             #BG Color
+             pygame.display.flip()
+
+     def _check_events(self):
+        """Respond to keypresses and mouse events."""
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                self._check_keydown_events(event)
+            elif event.type == pygame.KEYUP:
+                self._check_keyup_events(event)
+                
+     def _update_screen(self):
+        """Update images on the screen, and flip to the new screen."""
+        self.screen.fill(self.bg_color)
+         # draw path
+        pygame.draw.lines(self.screen, (150, 75, 0), False, self.path, 10)
+
+    # draw enemy
+        self.enemy.draw(self.screen)
+        pygame.display.flip()
+
+
+#      def path(self):
+#          self.path = [
+#     (0, 400),
+#     (300, 400),
+#     (300, 200),
+#     (700, 200),
+#     (700, 600),
+#     (1200, 600)
+# ]
+#          self.enemy = Enemy(self.path)
+#          pygame.draw.lines(self.screen, (150, 75, 0), False, self.path, 10)
+
+    
+
+if __name__ == '__main__':
+    # Make a game instance, and run the game.
+       ai = PVTParts()
+       ai.run_game()
