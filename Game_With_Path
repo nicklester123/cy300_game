@@ -41,17 +41,11 @@ class PVTParts:
 
 # Enemy
         self.enemy = Enemy(self.path)
-        self.hole_pos = self.path[-1]  # last point in path
-        self.game_over = False
     
-
-
      def run_game(self):
         """Start the main loop for the game."""
         while True:
              self._check_events()
-             if not self.game_over:
-               self.enemy.update()
              self._update_screen()
              self.enemy.update()  
             
@@ -63,12 +57,6 @@ class PVTParts:
              self.clock.tick(60)
              #BG Color
              pygame.display.flip()
-             self.enemy.update()
-# check if enemy reached end
-             if self.enemy.index >= len(self.path) - 1:
-              self.game_over = True
-
-
 
      def _check_events(self):
         """Respond to keypresses and mouse events."""
@@ -81,34 +69,27 @@ class PVTParts:
                 self._check_keyup_events(event)
                 
      def _update_screen(self):
-          self.screen.fill(self.bg_color)
+        """Update images on the screen, and flip to the new screen."""
+        self.screen.fill(self.bg_color)
+         # draw path
+        pygame.draw.lines(self.screen, (150, 75, 0), False, self.path, 10)
 
-          pygame.draw.lines(self.screen, (150, 75, 0), False, self.path, 10)
-          pygame.draw.circle(self.screen, (0, 0, 0), self.hole_pos, 20)
-
-          self.enemy.draw(self.screen)
-
-          if self.game_over:
-           font = pygame.font.SysFont(None, 80)
-           text = font.render("GAME OVER", True, (255, 0, 0))
-           rect = text.get_rect(center=(self.settings.screen_width // 2,
-                                     self.settings.screen_height // 2))
-           self.screen.blit(text, rect)
-
-          pygame.display.flip()
+    # draw enemy
+        self.enemy.draw(self.screen)
+        pygame.display.flip()
 
 
-#      def path(self):
-#          self.path = [
-#     (0, 400),
-#     (300, 400),
-#     (300, 200),
-#     (700, 200),
-#     (700, 600),
-#     (1200, 600)
-# ]
-#          self.enemy = Enemy(self.path)
-#          pygame.draw.lines(self.screen, (150, 75, 0), False, self.path, 10)
+     def path(self):
+         self.path = [
+    (0, 400),
+    (300, 400),
+    (300, 200),
+    (700, 200),
+    (700, 600),
+    (1200, 600)
+]
+         self.enemy = Enemy(self.path)
+         pygame.draw.lines(self.screen, (150, 75, 0), False, self.path, 10)
 
     
 
