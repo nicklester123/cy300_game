@@ -51,14 +51,14 @@ class PVTParts:
         self.towers.append(Tower(400,300))
 
         #Enemies
-        self.enemy = Enemy(self.path)
+        self.enemies = []
+        self.enemies.append(Enemy(self.path))
         self.hole_pos = self.path[-1]  # last point in path
         self.game_over = False
 
-        self.enemies = [self.enemy]
+        
 
-# Enemy
-        self.enemy = Enemy(self.path)
+
     
     def run_game(self):
         """Start the main loop for the game."""
@@ -66,8 +66,13 @@ class PVTParts:
             self._check_events()
 
             if not self.game_over:
-               self.enemy.update()
+                for enemy in self.enemies:
+                    enemy.update()
+
+            self.enemies = [e for e in self.enemies if e.health > 0]
   
+
+            self.enemies.sort(key=lambda e: e.index, reverse=True)
 
             for tower in self.towers:
                 tower.update(self.enemies)
@@ -75,18 +80,18 @@ class PVTParts:
             self._update_screen()
 
             # # Watch for keyboard and mouse events.
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    sys.exit()
+            
+            
                 #Frame rate
             self.clock.tick(60)
              #BG Color
             pygame.display.flip()
 
-            self.enemy.update()
+            
             # check if enemy reached end
-            if self.enemy.index >= len(self.path) - 1:
-                self.game_over = True
+            for enemy in self.enemies:
+                if enemy.index >= len(self.path) - 1:
+                    self.game_over = True
 
 
     def _check_events(self):
@@ -115,14 +120,16 @@ class PVTParts:
         pygame.draw.lines(self.screen, (150, 75, 0), False, self.path, 10)
 
     # draw enemy
-        self.enemy.draw(self.screen)
+        for enemy in self.enemies:
+            enemy.draw(self.screen)
 
-        self.screen.fill(self.bg_color)
+        
 
         pygame.draw.lines(self.screen, (150, 75, 0), False, self.path, 10)
         pygame.draw.circle(self.screen, (0, 0, 0), self.hole_pos, 20)
 
-        self.enemy.draw(self.screen)
+        for enemy in self.enemies:
+           enemy.draw(self.screen)
 
     # Game over visual
 
