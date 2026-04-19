@@ -47,6 +47,9 @@ class PVTParts:
         self.wave_cooldown = 0
         self.wave_in_progress = False
 
+        # Inside __init__
+        self.tower_limit = 3
+
     def run_game(self):
         """Start the main loop for the game."""
         while True:
@@ -97,6 +100,13 @@ class PVTParts:
                     self.wave += 1
                     self.wave_cooldown = 180 # 3 second break between waves
 
+                    # --- NEW: Increase tower limit every 3 rounds ---
+                    # if self.wave % 3 == 1 and self.wave > 1:
+                    self.tower_limit += 1
+                    print(f"Tower limit increased to: {self.tower_limit}")
+
+                
+
                 # 6. TIMERS
                 if self.wave_cooldown > 0:
                     self.wave_cooldown -= 1
@@ -109,28 +119,30 @@ class PVTParts:
             self.clock.tick(60)
 
     def _check_events(self):
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    pygame.quit()
-                    sys.exit()
-                # --- FIX: ADDED Q TO QUIT ---
-                elif event.key == pygame.K_q:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
 
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                mouse_x, mouse_y = pygame.mouse.get_pos()
-                grid_x = (mouse_x // self.grid_size) * self.grid_size
-                grid_y = (mouse_y // self.grid_size) * self.grid_size
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE or event.key == pygame.K_q:
+                        pygame.quit()
+                        sys.exit()
 
-                if not self.is_on_path(grid_x, grid_y) and not self.is_occupied(grid_x, grid_y):
-                    self.towers.append(Tower(grid_x, grid_y))
-                
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    mouse_x, mouse_y = pygame.mouse.get_pos()
+                    grid_x = (mouse_x // self.grid_size) * self.grid_size
+                    grid_y = (mouse_y // self.grid_size) * self.grid_size
+
+                    # Only one check needed here!
+                    if not self.is_on_path(grid_x, grid_y) and not self.is_occupied(grid_x, grid_y):
+                        # THIS is the gatekeeper that was being bypassed
+                        if len(self.towers) < self.tower_limit:
+                            self.towers.append(Tower(grid_x, grid_y))
+                            print(f"Placed tower {len(self.towers)}/{self.tower_limit}")
+                        else:
+                            print(f"At tower limit of {self.tower_limit}!")
+                    
     def _update_screen(self):
         """Update images on the screen, and flip to the new screen."""
         self.screen.fill(self.bg_color)
@@ -162,6 +174,10 @@ class PVTParts:
             self._display_message("YOU WIN!", (0, 155, 200))
         if self.game_over:
             self._display_message("GAME OVER", (255, 0, 0))
+
+        # Inside _update_screen
+        limit_text = font.render(f"Towers: {len(self.towers)}/{self.tower_limit}", True, (0, 0, 0))
+        self.screen.blit(limit_text, (20, 60)) # Placed slightly below the Wave text
 
         pygame.display.flip()
 
@@ -207,4 +223,3 @@ class PVTParts:
 if __name__ == '__main__':
     ai = PVTParts()
     ai.run_game()
-
