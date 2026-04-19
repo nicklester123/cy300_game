@@ -10,102 +10,121 @@ class PVTParts:
     def __init__(self):
         """Initialize the game, and create game resources."""
         pygame.init()
-        #Frame Rate
         self.clock = pygame.time.Clock()
-#Display Window
-        self.screen = pygame.display.set_mode((600, 400))
-        pygame.display.set_caption("PVT Parts")
 
-# Grid layout
-        self.grid_size = 40 
-
-#background color
-        self.bg_color = (100, 200, 100)
-        #Acess Settings
+        self.enemies_to_spawn = 0
+        self.spawn_timer = 0
+        self.wave_cooldown = 0
+        
+        # Access Settings
         self.settings = Settingz()
 
-        #Full screen mode
+        # Initialize Screen (Optimized to handle Fullscreen correctly)
         self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
         self.settings.screen_width = self.screen.get_rect().width
         self.settings.screen_height = self.screen.get_rect().height
+        pygame.display.set_caption("PVT Parts")
 
-        self.screen = pygame.display.set_mode(
-            (self.settings.screen_width, self.settings.screen_height))
-        # Path
+        self.grid_size = 40 
+        self.bg_color = (100, 200, 100)
+
+        # Path coordinates
         self.path = [
-    (0, 400),
-    (300, 400),
-    (300, 200),
-    (500, 200),
-    (500, 500),
-    (300, 500),
-    (300, 200),
-    (600, 200),
-    (600, 600),
-    (1200, 600)
-]
+            (0, 400), (300, 400), (300, 200), (500, 200),
+            (500, 500), (300, 500), (300, 200), (600, 200),
+            (600, 600), (1200, 600)
+        ]
         
-        
-        #Towers
         self.towers = []
-        self.towers.append(Tower(400,300))
-
-        #Enemies
         self.enemies = []
-        self.enemies.append(Enemy(self.path))
-        self.hole_pos = self.path[-1]  # last point in path
-        self.game_over = False
-
         
+        self.hole_pos = self.path[-1] 
+        self.game_over = False
+        self.you_win = False
 
+        self.wave = 1
+        self.max_waves = 20
+        self.wave_cooldown = 0
+        self.wave_in_progress = False
 
-    
     def run_game(self):
         """Start the main loop for the game."""
         while True:
             self._check_events()
 
-            if not self.game_over:
+            # Only run logic if the game is active
+            if not self.game_over and not self.you_win:
+                
+                # 1. WAVE TRIGGER: Start a new wave if cooldown is done
+                if not self.wave_in_progress and self.wave_cooldown <= 0 and self.wave <= self.max_waves:
+                    self.wave_in_progress = True
+                    self.enemies_to_spawn = 5 + (self.wave * 2)
+                    self.spawn_timer = 0
+                    print(f"DEBUG: Starting Wave {self.wave} with {self.enemies_to_spawn} enemies")
+
+                # 2. SPAWNING: Release enemies one by one
+                if self.enemies_to_spawn > 0:
+                    self.spawn_timer += 1
+                    if self.spawn_timer >= 40:  # Adjust this for gap between enemies
+                        from enemy import Enemy # Ensure it's imported
+                        new_enemy = Enemy(self.path)
+                        # Sync stats to current wave
+                        new_enemy.max_health = 50 + self.wave * 10
+                        new_enemy.health = new_enemy.max_health
+                        new_enemy.speed = 1 + self.wave * 0.1
+                        
+                        self.enemies.append(new_enemy)
+                        self.enemies_to_spawn -= 1
+                        self.spawn_timer = 0
+
+                # 3. UPDATES: Update everything exactly ONCE
                 for enemy in self.enemies:
                     enemy.update()
+                    if hasattr(enemy, 'reached_end') and enemy.reached_end:
+                        self.game_over = True
 
-            self.enemies = [e for e in self.enemies if e.health > 0]
-  
+                for tower in self.towers:
+                    tower.update(self.enemies)
 
-            self.enemies.sort(key=lambda e: e.index, reverse=True)
+                # 4. CLEANUP: Remove dead enemies
+                self.enemies = [e for e in self.enemies if not e.is_dead()]
 
-            for tower in self.towers:
-                tower.update(self.enemies)
+                # 5. WAVE COMPLETE CHECK: 
+                # Must be in progress, have no more to spawn, AND no more on screen
+                if self.wave_in_progress and self.enemies_to_spawn == 0 and len(self.enemies) == 0:
+                    print(f"DEBUG: Wave {self.wave} Cleared!")
+                    self.wave_in_progress = False
+                    self.wave += 1
+                    self.wave_cooldown = 180 # 3 second break between waves
 
+                # 6. TIMERS
+                if self.wave_cooldown > 0:
+                    self.wave_cooldown -= 1
+
+                if self.wave > self.max_waves:
+                    self.you_win = True
+
+            # Always update screen and tick clock
             self._update_screen()
-
-            # # Watch for keyboard and mouse events.
-            
-            
-                #Frame rate
             self.clock.tick(60)
-             #BG Color
-            pygame.display.flip()
-
-            
-            # check if enemy reached end
-            for enemy in self.enemies:
-                if enemy.index >= len(self.path) - 1:
-                    self.game_over = True
-
 
     def _check_events(self):
-        """Respond to keypresses and mouse events."""
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                pygame.quit()
                 sys.exit()
+
             elif event.type == pygame.KEYDOWN:
-                self._check_keydown_events(event)
-            elif event.type == pygame.KEYUP:
-                self._check_keyup_events(event)
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
+                # --- FIX: ADDED Q TO QUIT ---
+                elif event.key == pygame.K_q:
+                    pygame.quit()
+                    sys.exit()
+
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_x, mouse_y = pygame.mouse.get_pos()
-
                 grid_x = (mouse_x // self.grid_size) * self.grid_size
                 grid_y = (mouse_y // self.grid_size) * self.grid_size
 
@@ -116,56 +135,42 @@ class PVTParts:
         """Update images on the screen, and flip to the new screen."""
         self.screen.fill(self.bg_color)
 
-    # draw path
-        pygame.draw.lines(self.screen, (150, 75, 0), False, self.path, 10)
+        # Draw Grid
+        for x in range(0, self.settings.screen_width, self.grid_size):
+            pygame.draw.line(self.screen, (110, 210, 110), (x, 0), (x, self.settings.screen_height))
+        for y in range(0, self.settings.screen_height, self.grid_size):
+            pygame.draw.line(self.screen, (110, 210, 110), (0, y), (self.settings.screen_width, y))
 
-    # draw enemy
+        # Draw Path
+        pygame.draw.lines(self.screen, (150, 75, 0), False, self.path, 15)
+        pygame.draw.circle(self.screen, (0, 0, 0), self.hole_pos, 20)
+
+        # Draw Enemies
         for enemy in self.enemies:
             enemy.draw(self.screen)
 
-        
-
-        pygame.draw.lines(self.screen, (150, 75, 0), False, self.path, 10)
-        pygame.draw.circle(self.screen, (0, 0, 0), self.hole_pos, 20)
-
-        for enemy in self.enemies:
-           enemy.draw(self.screen)
-
-    # Game over visual
-
-        if self.game_over:
-           font = pygame.font.SysFont(None, 80)
-           text = font.render("GAME OVER", True, (255, 0, 0))
-           rect = text.get_rect(center=(self.settings.screen_width // 2,
-                                     self.settings.screen_height // 2))
-           self.screen.blit(text, rect)
-
-    # draw tower
+        # Draw Towers
         for tower in self.towers:
             tower.draw(self.screen)
 
-        for x in range(0, self.settings.screen_width, self.grid_size):
-            pygame.draw.line(self.screen, (200, 200, 200), (x, 0), (x, self.settings.screen_height))
+        # UI Overlay
+        font = pygame.font.SysFont(None, 40)
+        wave_text = font.render(f"Wave: {self.wave}/{self.max_waves}", True, (0, 0, 0))
+        self.screen.blit(wave_text, (20, 20))
 
-        for y in range(0, self.settings.screen_height, self.grid_size):
-            pygame.draw.line(self.screen, (200, 200, 200), (0, y), (self.settings.screen_width, y))
+        if self.you_win:
+            self._display_message("YOU WIN!", (0, 155, 200))
+        if self.game_over:
+            self._display_message("GAME OVER", (255, 0, 0))
 
-    # keep this at bottom (avoids blinking)
         pygame.display.flip()
 
-    def path(self):
-        self.path = [
-    (0, 400),
-    (300, 400),
-    (300, 200),
-    (700, 200),
-    (700, 600),
-    (1200, 600)
-]
-        self.enemy = Enemy(self.path)
-        pygame.draw.lines(self.screen, (150, 75, 0), False, self.path, 10)
+    def _display_message(self, message, color):
+        font = pygame.font.SysFont(None, 80)
+        text = font.render(message, True, color)
+        rect = text.get_rect(center=(self.settings.screen_width // 2, self.settings.screen_height // 2))
+        self.screen.blit(text, rect)
 
-# Prevents placing on the path
     def is_on_path(self, x, y):
         for point in self.path:
             px, py = point
@@ -173,17 +178,33 @@ class PVTParts:
                 return True
         return False
 
-
-# Prevents stacking towers
     def is_occupied(self, x, y):
         for tower in self.towers:
             if tower.x == x and tower.y == y:
                 return True
         return False
+    
+    def spawn_wave(self):
+        self.wave_in_progress = True
+        enemies_to_spawn = 5 + self.wave * 2
 
+        for i in range(enemies_to_spawn):
+            enemy = Enemy(self.path)
+            enemy.max_health = 50 + self.wave * 10
+            enemy.health = enemy.max_health
+            enemy.speed = 1 + self.wave * 0.05
+            
+            # Start position
+            enemy.x, enemy.y = self.path[0]
+            
+            # NOTE: To prevent enemies from clumping, you might want 
+            # to offset their start position or add a spawn timer.
+            enemy.x -= (i * 40) 
 
+            self.enemies.append(enemy)
+        print(f"Wave {self.wave} spawned with {enemies_to_spawn} enemies.")
 
 if __name__ == '__main__':
-    # Make a game instance, and run the game.
-       ai = PVTParts()
-       ai.run_game()
+    ai = PVTParts()
+    ai.run_game()
+
