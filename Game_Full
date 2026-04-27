@@ -8,7 +8,8 @@ import math
 class PVTParts:
 
     def __init__(self):
-        """Initialize the game, and create game resources."""
+        """Initialize the game engine, screen settings, path coordinates, and
+          initial game state variables."""
         pygame.init()
         self.clock = pygame.time.Clock()
 
@@ -51,7 +52,8 @@ class PVTParts:
         self.tower_limit = 3
 
     def run_game(self):
-        """Start the main loop for the game."""
+        """Execute the main game loop that handles wave logic, entity updates, 
+        and screen refreshing."""
         while True:
             self._check_events()
 
@@ -65,19 +67,27 @@ class PVTParts:
                     self.spawn_timer = 0
                     print(f"DEBUG: Starting Wave {self.wave} with {self.enemies_to_spawn} enemies")
 
+                
                 # 2. SPAWNING: Release enemies one by one
                 if self.enemies_to_spawn > 0:
                     self.spawn_timer += 1
-                    if self.spawn_timer >= 40:  # Adjust this for gap between enemies
-                        from enemy import Enemy # Ensure it's imported
-                        new_enemy = Enemy(self.path)
-                        # Sync stats to current wave
-                        new_enemy.max_health = 50 + self.wave * 10
+                    if self.spawn_timer >= 40:
+                        # Check if this is a boss wave (Wave 3, 6, 9...)
+                        is_boss_wave = (self.wave % 3 == 0)
+
+                        if is_boss_wave:
+                            new_enemy = Enemy(self.path, is_boss=True)
+                            new_enemy.max_health = (50 + self.wave * 10) * 5  # 5x Health
+                            new_enemy.speed = 0.5  # Slower speed
+                            self.enemies_to_spawn = 0 # Only spawn ONE boss
+                        else:
+                            new_enemy = Enemy(self.path, is_boss=False)
+                            new_enemy.max_health = 50 + self.wave * 10
+                            new_enemy.speed = 1 + self.wave * 0.1
+                            self.enemies_to_spawn -= 1
+
                         new_enemy.health = new_enemy.max_health
-                        new_enemy.speed = 1 + self.wave * 0.1
-                        
                         self.enemies.append(new_enemy)
-                        self.enemies_to_spawn -= 1
                         self.spawn_timer = 0
 
                 # 3. UPDATES: Update everything exactly ONCE
@@ -93,7 +103,6 @@ class PVTParts:
                 self.enemies = [e for e in self.enemies if not e.is_dead()]
 
                 # 5. WAVE COMPLETE CHECK: 
-                # Must be in progress, have no more to spawn, AND no more on screen
                 if self.wave_in_progress and self.enemies_to_spawn == 0 and len(self.enemies) == 0:
                     print(f"DEBUG: Wave {self.wave} Cleared!")
                     self.wave_in_progress = False
@@ -101,11 +110,8 @@ class PVTParts:
                     self.wave_cooldown = 180 # 3 second break between waves
 
                     # --- NEW: Increase tower limit every 3 rounds ---
-                    # if self.wave % 3 == 1 and self.wave > 1:
                     self.tower_limit += 1
                     print(f"Tower limit increased to: {self.tower_limit}")
-
-                
 
                 # 6. TIMERS
                 if self.wave_cooldown > 0:
@@ -119,6 +125,8 @@ class PVTParts:
             self.clock.tick(60)
 
     def _check_events(self):
+            """Listen for keyboard and mouse inputs to handle quitting and
+              tower placement."""
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
@@ -144,7 +152,8 @@ class PVTParts:
                             print(f"At tower limit of {self.tower_limit}!")
                     
     def _update_screen(self):
-        """Update images on the screen, and flip to the new screen."""
+        """Draw the background, grid, path, entities, and UI overlays before 
+        flipping the display buffer."""
         self.screen.fill(self.bg_color)
 
         # Draw Grid
@@ -182,12 +191,16 @@ class PVTParts:
         pygame.display.flip()
 
     def _display_message(self, message, color):
+        """Render and center a large text message on the screen for game-over 
+        or victory states."""
         font = pygame.font.SysFont(None, 80)
         text = font.render(message, True, color)
         rect = text.get_rect(center=(self.settings.screen_width // 2, self.settings.screen_height // 2))
         self.screen.blit(text, rect)
 
     def is_on_path(self, x, y):
+        """Check if a specific grid coordinate overlaps with any point on the 
+        enemy path."""
         for point in self.path:
             px, py = point
             if abs(x - px) < self.grid_size and abs(y - py) < self.grid_size:
@@ -195,12 +208,16 @@ class PVTParts:
         return False
 
     def is_occupied(self, x, y):
+        """Determine if a tower already exists at the specified grid 
+        coordinates."""
         for tower in self.towers:
             if tower.x == x and tower.y == y:
                 return True
         return False
     
     def spawn_wave(self):
+        """Instantiate a group of enemies with scaled health and speed based on 
+        the current wave number."""
         self.wave_in_progress = True
         enemies_to_spawn = 5 + self.wave * 2
 
@@ -213,8 +230,6 @@ class PVTParts:
             # Start position
             enemy.x, enemy.y = self.path[0]
             
-            # NOTE: To prevent enemies from clumping, you might want 
-            # to offset their start position or add a spawn timer.
             enemy.x -= (i * 40) 
 
             self.enemies.append(enemy)
