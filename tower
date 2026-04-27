@@ -1,36 +1,68 @@
-
 import pygame
 import math
+from bullet import Bullet
 
 class Tower:
     def __init__(self, x, y):
+        """Initialize the tower's position, load its visual sprite, and set combat statistics."""
         self.x = x
         self.y = y
+
+        # --- NEW: Load and scale the tower image ---
+        try:
+            self.original_image = pygame.image.load('Tower_Project/soldier.png').convert_alpha()
+            self.image = pygame.transform.scale(self.original_image, (40, 40))
+        except pygame.error:
+            # Fallback if image is missing
+            self.image = pygame.Surface((40, 40))
+            self.image.fill((0, 0, 255))
+            print("Warning: Could not find tower_base.png")
+        # -------------------------------------------
 
         self.range = 150
         self.color = (0,0,255)
 
-        self.fire_rate = 60 #frames between shots
+        self.fire_rate = 60 # frames between shots
         self.timer = 0
+        self.cooldown = 0
+        self.bullets = []
 
     def update(self, enemies):
-        self.timer += 1
+        """Manage the firing cooldown, target acquisition, bullet creation, and the lifecycle of existing projectiles."""
+        if self.cooldown > 0:
+            self.cooldown -= 1
 
-        if self.timer >= self.fire_rate:
-            target = self.get_target(enemies)
-            if target:
-                print('shooting enemy') # placeholder
-                self.timer = 0
+        target = self.get_target(enemies)
+
+        if target and self.cooldown == 0:
+            self.bullets.append(Bullet(self.x, self.y, target))
+            self.cooldown = self.fire_rate
+
+        # update bullets
+        for bullet in self.bullets:
+            bullet.update()
+
+        # remove dead bullets
+        self.bullets = [b for b in self.bullets if b.alive]
 
     def draw(self, screen):
-        # draw tower
-        pygame.draw.circle(screen, self.color, (self.x, self.y), 15)
+        """Render the tower sprite, the optional range circle, and all active bullets to the screen."""
+        # --- NEW: Draw the tower image ---
+        # Center the image over the x, y coordinates
+        image_x = self.x - self.image.get_width() // 2
+        image_y = self.y - self.image.get_height() // 2
+        screen.blit(self.image, (image_x, image_y))
+        # ---------------------------------
 
         # draw range (optional)
         pygame.draw.circle(screen, (0, 0, 255), (self.x, self.y), self.range, 1)
+        
+        for bullet in self.bullets:
+          bullet.draw(screen)
 
     def get_target(self, enemies):
-        for enemy in enemies:
+        """Identify and return the first enemy in the list that falls within the tower's calculated firing range."""
+        for enemy in enemies:  # assumes first = closest to goal
             dist = math.hypot(enemy.x - self.x, enemy.y - self.y)
             if dist <= self.range:
                 return enemy
