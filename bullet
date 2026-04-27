@@ -3,6 +3,8 @@ import math
 
 class Bullet:
     def __init__(self, x, y, target):
+        """Initialize the bullet's starting position, tracking target, 
+        movement speed, and offensive power."""
         self.x = x
         self.y = y
         self.target = target
@@ -11,6 +13,8 @@ class Bullet:
         self.alive = True
 
     def update(self):
+        """Calculate the trajectory toward the target, apply damage upon impact,
+          and manage the bullet's active state."""
         # If target dies before bullet hits, kill the bullet
         if self.target.health <= 0:
             self.alive = False
@@ -29,8 +33,11 @@ class Bullet:
             self.x += (dx / dist) * self.speed
             self.y += (dy / dist) * self.speed
         # Inside Bullet.update()
-        if self.x < 0 or self.x > 1920 or self.y < 0 or self.y > 1080: # Or your screen width/height
+        if self.x < 0 or self.x > 1920 or self.y < 0 or self.y > 1080: 
+            # Or your screen width/height
             self.alive = False
 
     def draw(self, screen):
+        """Render the bullet as a small circle at its current coordinates on 
+        the game screen."""
         pygame.draw.circle(screen, (0, 0, 0), (int(self.x), int(self.y)), 5)
