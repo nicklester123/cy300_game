@@ -1,40 +1,78 @@
 import pygame
 import math
-from pygame.sprite import Sprite
+import random  # Import random to handle the selection
 
-class Enemy(Sprite):
-    def __init__(self, path):
+class Enemy:
+    def __init__(self, path, is_boss=False):
+        """Initialize the enemy and assign either a unique boss sprite or a random regular sprite based on the enemy type."""
         self.path = path
         self.index = 0
         self.x, self.y = path[0]
-        self.speed = 2
+        self.is_boss = is_boss
+
+        try:
+            if self.is_boss:
+                # --- NEW: Load the special Boss image ---
+                self.original_image = pygame.image.load('Tower_Project/cig.png').convert_alpha()
+                size = (100, 120)  # Larger size for the boss
+            else:
+                # Regular random enemy logic
+                image_files = ['Tower_Project/fastfood.png', 'Tower_Project/beer.png']
+                chosen_file = random.choice(image_files)
+                self.original_image = pygame.image.load(chosen_file).convert_alpha()
+                size = (30, 40)
+
+            self.image = pygame.transform.scale(self.original_image, size)
+            
+        except pygame.error:
+            # Fallback if images are missing
+            self.image = pygame.Surface((30, 40))
+            self.image.fill((255, 0, 0) if not is_boss else (150, 0, 0))
+            print(f"Warning: Could not find image file.")
+
+        self.rect = self.image.get_rect()
+        self.speed = 1
         self.max_health = 100
         self.health = self.max_health
+        self.reached_end = False
 
     def update(self):
-        if self.index < len(self.path) - 1:
-            target_x, target_y = self.path[self.index + 1]
+        """Calculate the distance to the next path node and move the enemy toward it or advance to the next segment."""
+        if self.index >= len(self.path) - 1:
+            self.reached_end = True
+            self.health = 0
+            return
 
-            dx = target_x - self.x
-            dy = target_y - self.y
-            dist = math.hypot(dx, dy)
+        target_x, target_y = self.path[self.index + 1]
+        dx = target_x - self.x
+        dy = target_y - self.y
+        distance = math.hypot(dx, dy)
 
-            if dist < self.speed:
-                self.index += 1
-            else:
-                self.x += (dx / dist) * self.speed
-                self.y += (dy / dist) * self.speed
+        if distance > self.speed:
+            self.x += (dx / distance) * self.speed
+            self.y += (dy / distance) * self.speed
+        else:
+            self.x, self.y = target_x, target_y
+            self.index += 1
 
     def draw(self, screen):
-        pygame.draw.circle(screen, (255, 0, 0), (int(self.x), int(self.y)), 10)
+        """Render the enemy and a health bar that sits higher up if the enemy is a boss."""
+        image_x = self.x - self.image.get_width() // 2
+        image_y = self.y - self.image.get_height() // 2
+        screen.blit(self.image, (image_x, image_y))
 
-        # health bar
-        bar_width = 30
-        bar_height = 5
-        health_ratio = self.health / self.max_health
+        # Adjust bar height based on if it's a boss
+        y_offset = 60 if self.is_boss else 30
+        
+        bar_width = 60 if self.is_boss else 30 # Wider bar for boss
+        bar_height = 8 if self.is_boss else 5
+        health_ratio = max(0, self.health / self.max_health)
 
-        pygame.draw.rect(screen, (255, 0, 0),
-            (self.x - bar_width//2, self.y - 20, bar_width, bar_height))
-
+        pygame.draw.rect(screen, (200, 0, 0),
+                         (self.x - bar_width//2, self.y - y_offset, bar_width, bar_height))
         pygame.draw.rect(screen, (0, 255, 0),
-            (self.x - bar_width//2, self.y - 20, bar_width * health_ratio, bar_height))
+                         (self.x - bar_width//2, self.y - y_offset, bar_width * health_ratio, bar_height))
+    
+    def is_dead(self):
+        """Check the current health of the enemy and return true if it has reached zero or fallen below."""
+        return self.health <= 0
