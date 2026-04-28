@@ -2,8 +2,9 @@ import sys
 import pygame
 from tower_settings import Settingz
 from enemy import Enemy
-from tower import Tower
+from tower import Tower,HeavyTower,MachineGunTower, MortarMan
 import math
+import random
 
 class PVTParts:
 
@@ -30,14 +31,26 @@ class PVTParts:
         self.bg_color = (100, 200, 100)
 
         # Path coordinates
-        self.path = [
+        self.paths = [
+        #Path 1
+        [
             (0, 400), (300, 400), (300, 200), (500, 200),
             (500, 500), (300, 500), (300, 200), (600, 200),
             (600, 600), (1200, 600)
+        ],
+
+        #Path 2 (example)
+        [
+        (0, 500), (400, 500), (400, 100), (900, 100),
+        (900, 700), (1200, 700)
+        ]
         ]
         
+        self.path = random.choice(self.paths)
         self.towers = []
         self.enemies = []
+
+        self.selected_tower_class = Tower #Defaults to default tower
         
         self.hole_pos = self.path[-1] 
         self.game_over = False
@@ -136,6 +149,18 @@ class PVTParts:
                     if event.key == pygame.K_ESCAPE or event.key == pygame.K_q:
                         pygame.quit()
                         sys.exit()
+                    elif event.key == pygame.K_1:
+                        self.selected_tower_class = Tower
+                        print("Basic Tower Selected")
+                    elif event.key == pygame.K_2:
+                        self.selected_tower_class = HeavyTower
+                        print("Heavy Tower Selected")
+                    elif event.key == pygame.K_3:
+                        self.selected_tower_class = MachineGunTower
+                        print("Heavy Tower Selected")
+                    elif event.key == pygame.K_4:
+                        self.selected_tower_class = MortarMan
+                        print("Mortar Selected")
 
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -146,7 +171,8 @@ class PVTParts:
                     if not self.is_on_path(grid_x, grid_y) and not self.is_occupied(grid_x, grid_y):
                         # THIS is the gatekeeper that was being bypassed
                         if len(self.towers) < self.tower_limit:
-                            self.towers.append(Tower(grid_x, grid_y))
+                            new_tower = self.selected_tower_class(grid_x, grid_y)
+                            self.towers.append(new_tower)
                             print(f"Placed tower {len(self.towers)}/{self.tower_limit}")
                         else:
                             print(f"At tower limit of {self.tower_limit}!")
@@ -187,6 +213,11 @@ class PVTParts:
         # Inside _update_screen
         limit_text = font.render(f"Towers: {len(self.towers)}/{self.tower_limit}", True, (0, 0, 0))
         self.screen.blit(limit_text, (20, 60)) # Placed slightly below the Wave text
+
+        #Shows selected tower
+        selected_name = self.selected_tower_class.__name__
+        selected_text = font.render(f"Selected: {selected_name}", True, (0, 0, 0))
+        self.screen.blit(selected_text, (20, 100))
 
         pygame.display.flip()
 
