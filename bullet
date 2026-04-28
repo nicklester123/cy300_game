@@ -2,14 +2,14 @@ import pygame
 import math
 
 class Bullet:
-    def __init__(self, x, y, target):
+    def __init__(self, x, y, target, damage):
         """Initialize the bullet's starting position, tracking target, 
         movement speed, and offensive power."""
         self.x = x
         self.y = y
         self.target = target
         self.speed = 10
-        self.damage = 10 # Adjust this to your liking
+        self.damage = damage # Adjusts based on tower
         self.alive = True
 
     def update(self):
@@ -41,3 +41,30 @@ class Bullet:
         """Render the bullet as a small circle at its current coordinates on 
         the game screen."""
         pygame.draw.circle(screen, (0, 0, 0), (int(self.x), int(self.y)), 5)
+
+
+class MortarShell(Bullet):
+    def __init__(self, x, y, target, damage, enemies, splash_radius=60):
+        super().__init__(x,y, target, damage)
+        self.enemies = enemies
+        self.splash_radius = splash_radius
+
+    def update(self):
+        if self.target.health <= 0:
+            self.alive = False
+            return
+
+        dx = self.target.x - self.x
+        dy = self.target.y - self.y
+        dist = math.hypot(dx, dy)
+
+        if dist < self.speed:
+            for enemy in self.enemies:
+                d = math.hypot(enemy.x - self.target.x, enemy.y - self.target.y)
+                if d <= self.splash_radius:
+                    enemy.health -= self.damage
+
+            self.alive = False
+        else:
+            self.x += (dx / dist) * self.speed
+            self.y += (dy / dist) * self.speed
