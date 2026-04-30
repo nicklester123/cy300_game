@@ -1,9 +1,8 @@
-
 import pygame
 import math
 from bullet import Bullet, MortarShell
 
-class Tower:
+class Grunt:
     def __init__(self, x, y):
         """Initialize the tower's position, load its visual sprite, and set combat statistics."""
         self.x = x
@@ -70,7 +69,7 @@ class Tower:
         return None
     
 
-class HeavyTower(Tower):
+class Heavy(Grunt):
     def __init__(self, x, y):
         super().__init__(x, y)
 
@@ -79,7 +78,7 @@ class HeavyTower(Tower):
         self.range = 200
         self.color = (0,255,0)
 
-class MachineGunTower(Tower):
+class MachineGun(Grunt):
     def __init__(self, x, y):
         super().__init__(x, y)
 
@@ -88,7 +87,7 @@ class MachineGunTower(Tower):
         self.range = 100
         self.color = (255,0,0)
 
-class MortarMan(Tower):
+class MortarMan(Grunt):
     def __init__(self, x, y):
         super().__init__(x, y)
 
