@@ -94,7 +94,7 @@ class MortarMan(Grunt):
         self.fire_rate = 150
         self.damage = 75
         self.range = 300
-        self.color = (200,200,200)
+        self.color = (200,0,255)
 
     def update(self, enemies):
         if self.cooldown > 0:
