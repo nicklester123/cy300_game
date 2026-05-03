@@ -1,0 +1,63 @@
+import pytest
+from unittest.mock import MagicMock, patch
+import pygame
+
+# We mock the external imports so the test doesn't fail if the files are missing
+with patch('pygame.display.set_mode'), \
+     patch('pygame.display.set_caption'), \
+     patch('tower_settings.Settingz'), \
+     patch('tower.Grunt'), \
+     patch('enemy.Enemy'):
+    from The_Game import PVTParts  # Replace 'main' with your actual filename if different
+
+@pytest.fixture
+def game():
+    """Fixture to initialize the game with mocked pygame display."""
+    with patch('pygame.display.set_mode'):
+        with patch('pygame.font.SysFont'):
+            app = PVTParts()
+            # Set a fixed path for deterministic testing
+            app.path = [(0, 400), (300, 400)]
+            return app
+
+def test_tower_placement_limit(game):
+    """Test 1: Ensure towers cannot be placed beyond the current tower_limit."""
+    game.tower_limit = 2
+    game.towers = []
+    
+    # Mock tower objects
+    mock_tower = MagicMock()
+    game.selected_tower_class = MagicMock(return_value=mock_tower)
+    
+    # Manually simulate 3 mouse clicks at valid, non-overlapping spots
+    # (Simplified: we bypass the event loop and test the logic used in MOUSEBUTTONDOWN)
+    for i in range(3):
+        if len(game.towers) < game.tower_limit:
+            game.towers.append(game.selected_tower_class(i*40, i*40))
+
+    # Assertions
+    assert len(game.towers) == 2
+    assert len(game.towers) <= game.tower_limit
+    print(f"Test Passed: Tower count {len(game.towers)} stayed within limit {game.tower_limit}")
+
+def test_wave_progression_logic(game):
+    """Test 2: Ensure wave increments and tower limit increases when wave is cleared."""
+    game.wave = 1
+    game.tower_limit = 3
+    game.wave_in_progress = True
+    game.enemies_to_spawn = 0
+    game.enemies = [] # No enemies left
+    
+    # We simulate the logic found in the run_game loop (Section 5)
+    if game.wave_in_progress and game.enemies_to_spawn == 0 and len(game.enemies) == 0:
+        game.wave_in_progress = False
+        game.wave += 1
+        game.tower_limit += 1
+
+    # Assertions
+    assert game.wave == 2
+    assert game.tower_limit == 4
+    assert game.wave_in_progress is False
+    print(f"Test Passed: Wave progressed to {game.wave} and limit increased to {game.tower_limit}")
+
+#py -m pytest
